@@ -445,9 +445,10 @@ void initialize_game()
     {
       Player * player = players + player_id;
       player->state = PLAYER_UP;
-      player->y = 3;
-      float distance = (PLAYFIELD_WIDTH / player_count);
-      player->x = distance / 2 + distance * player_id;
+      float distance_y = (PLAYFIELD_HEIGHT / player_count);
+      player->y = distance_y / 2 + distance_y * player_id;
+      float distance_x = (PLAYFIELD_WIDTH / player_count);
+      player->x = distance_x / 2 + distance_x * player_id;
       field[player->y][player->x] = player_id;
     }
   if(graphics_enabled)
@@ -520,6 +521,17 @@ void get_player_stats(int * xs, int * ys, int * states, int * lifetimes)
       lifetimes[player_id] = players[player_id].lifetime;
     }
 }
+void set_player_direction(int player_id, int d)
+{
+  switch (d)
+    {
+    case 0: players[player_id].state = PLAYER_UP; break;
+    case 1: players[player_id].state = PLAYER_LEFT; break;
+    case 2: players[player_id].state = PLAYER_DOWN; break;
+    case 3: players[player_id].state = PLAYER_RIGHT; break;
+    default: break;
+    }
+}
 void send_message(int player_id, int message_length, char message[])
 {
   for(int j = 0; message != 0 && j < MESSAGE_LENGTH && j < message_length; message++, j++)
@@ -529,8 +541,16 @@ void send_message(int player_id, int message_length, char message[])
 void get_playfield(uint8_t f[])
 {
   for(int y = 0; y < PLAYFIELD_HEIGHT; y++)
-    for(int x = 0; x < PLAYFIELD_WIDTH;x++)
+    for(int x = 0; x < PLAYFIELD_WIDTH; x++)
       f[y*PLAYFIELD_WIDTH+x] = field[y][x];
+}
+void set_graphics(int graphics)
+{
+  graphics_enabled = graphics;
+}
+void set_wait_for_tick(int wait)
+{
+  wait_for_tick = wait;
 }
 
 
@@ -549,29 +569,6 @@ int main(int argc, char * argv[])
       int result = SDL_WaitEvent(&event);
       if (event.type == SDL_QUIT)
 	return 0;
-      else if (event.type == SDL_KEYDOWN)
-	{
-	  switch(event.key.keysym.scancode)
-	    {
-	    case SDL_SCANCODE_0:
-	      PLAY_SOUND(SOUND_COLLECT_ITEM); break;
-	    case SDL_SCANCODE_1:
-	      PLAY_SOUND(SOUND_DAMAGE); break;
-	    case SDL_SCANCODE_2:
-	      PLAY_SOUND(SOUND_DEATH); break;
-	    case SDL_SCANCODE_3:
-	      PLAY_SOUND(SOUND_DOOR); break;
-	    case SDL_SCANCODE_4:
-	      PLAY_SOUND(SOUND_EXTRA_LIFE); break;
-	    case SDL_SCANCODE_5:
-	      PLAY_SOUND(SOUND_GAME_OVER); break;
-	    case SDL_SCANCODE_6:
-	      PLAY_SOUND(SOUND_TITLE); break;
-	    case SDL_SCANCODE_7:
-	      PLAY_SOUND(SOUND_TOO_BAD); break;
-	    default: break;
-	    }
-	}
     }
   return 0;
 }
