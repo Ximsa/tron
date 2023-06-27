@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
+import random
 
 libname = pathlib.Path().absolute() / "libtron.so"
 tron = ctypes.CDLL(libname)
@@ -48,12 +49,18 @@ def set_player_direction(player_id, d):
     tron.set_player_direction(player_id, d)
 
 
+    
+def mutate(model_a, model_b):
+    pass
 
+def crossover(model_a, model_b):
+    pass
+    
 def get_playfield_centered(x,y):
     return np.vectorize(lambda x: 0 if x == 0xFF else 1)(np.roll(get_playfield(), [12-x,10-y], [1,0]))
 
-def create_population():
-    return [torch.nn.Sequential(nn.Linear(20*24, 4), nn.ReLU()) for i in range(8*8)]
+def create_population(pop_size):
+    return [torch.nn.Sequential(nn.Linear(20*24, 4), nn.ReLU()) for i in range(pop_size)]
 
 def get_model_action(model, playfield):
     return torch.argmax(model(torch.from_numpy(playfield.flatten()).float())).item()
@@ -71,16 +78,25 @@ def run_games(population):
         while(alive_players > 0):
             i = 0
             for x, y, state, lifetime in zip(*get_player_stats()):
-                i = i + 1
                 if state != 0:
                     action = get_model_action(part[i], get_playfield_centered(x,y))
                     set_player_direction(i, action)
+                i = i + 1
             wait_n_ticks(1)
             alive_players = tick()
         xs, ys, states, lifetimes = get_player_stats()
         fitnesses = np.append(fitnesses, lifetimes)
         set_graphics(0)
     return fitnesses
+
+def ga_loop():
+    population_size = 64
+    population = create_population(population_size)
+    fitnesses = run_games(population)
+    print(fitnesses)
+    selection = random.choices(population, fitnesses, k=int(population_size / 8))
+    return selection
+ga_loop()
 
 setup(1,0,1)
 run_games(create_population())
