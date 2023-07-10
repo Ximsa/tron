@@ -8,7 +8,7 @@ run: tron
 	./tron
 
 lib: tron.c
-	gcc -Wall -O2 -shared -fPIC -lSDL2 tron.c -o ./libtron.so
+	gcc  -Wall -O2 -shared -fPIC tron.c -o ./libtron.so -lSDL2
 
-release: comic.c
-	gcc -Wall -O2 -ffast-math -o ./tron tron.c -lSDL2
+release: tron.c
+	gcc -Wall -O3 -ffast-math -o ./tron tron.c -lSDL2

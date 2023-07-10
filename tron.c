@@ -84,6 +84,7 @@ typedef struct {
   uint32_t color;
   char message[MESSAGE_LENGTH];
   int lifetime;
+  int dead_by;
 } Player;
 
 Player players[MAX_PLAYERS] = {0};
@@ -298,6 +299,8 @@ void write_message(uint32_t color, int message_length, char * message)
   chatbox_y = chatbox_y + CHAR_HEIGHT + 1;
   if(chatbox_y > CHATBOX_Y + CHATBOX_HEIGHT)
     chatbox_y = CHATBOX_Y + 1;
+  char buf[MESSAGE_LENGTH] = {[0 ... (MESSAGE_LENGTH-1)] = ' '};
+  write_text(CHATBOX_X, chatbox_y > CHATBOX_Y + CHATBOX_HEIGHT? CHATBOX_Y+1:chatbox_y, color, MESSAGE_LENGTH, buf);
 }
 
 int field_to_screen_x(int x)
@@ -341,9 +344,10 @@ void draw_field()
     for(int x = 0; x < PLAYFIELD_WIDTH; x++)
       {
 	uint8_t player_id = field[y][x];
-	uint32_t color = field[y][x] == 0xFF? 0x00000000 : players[player_id].color;
-	uint32_t colors[] = {[0 ... (8*8-1)] = color};
-	blit_to_screen(field_to_screen_x(x), field_to_screen_y(y), 8, 8, (uint8_t*)colors);
+	uint32_t player_color = players[player_id].color;
+	uint32_t color = field[y][x] == 0xFF? 0x00000000 : player_color;
+	uint32_t colors[] = {[0 ... (6*6-1)] = color};
+	blit_to_screen(field_to_screen_x(x)+1, field_to_screen_y(y)+1, 6, 6, (uint8_t*)colors);
       }
 }
 
@@ -361,7 +365,10 @@ int move(int player_id, int x, int y, int dx, int dy)
   x = (x+PLAYFIELD_WIDTH+dx) % PLAYFIELD_WIDTH;
   y = (y+PLAYFIELD_HEIGHT+dy) % PLAYFIELD_HEIGHT;
   if(field[y][x] != 0xFF)
-    return MOVE_CRASH;
+    {
+      players[player_id].dead_by = field[y][x];
+      return MOVE_CRASH;
+    }
   field[y][x] = player_id;
   players[player_id].x = x;
   players[player_id].y = y;
@@ -418,7 +425,9 @@ int tick()
 	}
       if(player->state == PLAYER_DYING)
 	{
-	  SDL_Log("player %i dying\n", player_id);
+	  char buffer[16] = {0};
+	  sprintf(buffer, "%s died", player->name);
+	  write_message(player->color, 16, buffer);
 	  remove_player(player_id);
 	}
     }
@@ -472,6 +481,7 @@ void register_player(int name_length, char * name)
 	  players[i].y = 0;
 	  players[i].state = PLAYER_UP;
 	  players[i].lifetime = 0;
+	  players[i].dead_by = 0xFF;
 	  break;
 	}
     }
@@ -479,6 +489,7 @@ void register_player(int name_length, char * name)
 
 void reset()
 {
+  chatbox_y = CHATBOX_Y + 1;
   for(int player_id = 0; player_id < MAX_PLAYERS; player_id++)
     {
       Player * player = players + player_id;
@@ -488,6 +499,7 @@ void reset()
       player->x = 0;
       player->y = 0;
       player->lifetime = 0;
+      player->dead_by = 0xFF;
     }
   if(graphics_enabled)
     {
@@ -511,7 +523,7 @@ void setup(uint8_t graphics, uint8_t sound, uint8_t fast)
     }
 }
 
-void get_player_stats(int * xs, int * ys, int * states, int * lifetimes)
+void get_player_stats(int * xs, int * ys, int * states, int * lifetimes, int * dead_by)
 {
   for(size_t player_id = 0; player_id < MAX_PLAYERS; player_id++)
     {
@@ -519,6 +531,7 @@ void get_player_stats(int * xs, int * ys, int * states, int * lifetimes)
       ys[player_id] = players[player_id].y;
       states[player_id] = players[player_id].state;
       lifetimes[player_id] = players[player_id].lifetime;
+      dead_by[player_id] = players[player_id].dead_by;
     }
 }
 void set_player_direction(int player_id, int d)
